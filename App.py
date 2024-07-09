@@ -1,12 +1,9 @@
-from PegaDados import entra_na_do_seu_curso
-from LeDados import main, janela_login
+from PegaDados import janela_login
+from LeDados import main
 import os
 
 try:
-    resultado = janela_login()
-    mat = resultado[0]
-    sen = resultado[1]
-    nome = entra_na_do_seu_curso(mat, sen)
+    nome = janela_login()
     main(nome)
 except Exception as e:
     print(f"Erro: {e}")

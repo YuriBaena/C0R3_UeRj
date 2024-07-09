@@ -86,63 +86,6 @@ def calcular_cr():
         cr_var.set("CR: N/A")
 
 
-def fazer_login(matricula_entry, senha_entry):
-    matricula = matricula_entry.get()
-    senha = senha_entry.get()
-    return [matricula, senha]
-
-
-def janela_login():
-    # Criando a janela de login
-    login_janela = tk.Tk()
-    login_janela.title("Login")
-    login_janela.config(background="#596475")
-
-    # Frame para conter tudo
-    tudo = Frame(login_janela, bg="#596475")
-    tudo.pack(padx=20, pady=40)
-
-    # Cabeçalho
-    header = Frame(tudo, bg="#34495e")
-    header.pack(fill=X)
-
-    header_label = Label(header, text="Login", font=("Helvetica", 18), fg="white", bg="#34495e")
-    header_label.pack(pady=10)
-
-    # Campos de entrada
-    matricula_label = Label(tudo, text="Matrícula:", fg="white", bg="#596475")
-    matricula_label.pack(pady=5)
-
-    matricula_entry = Entry(tudo, bg="#464e5c", fg="white", highlightthickness=0)
-    matricula_entry.pack(pady=5)
-
-    senha_label = Label(tudo, text="Senha:", fg="white", bg="#596475")
-    senha_label.pack(pady=5)
-
-    senha_entry = Entry(tudo, bg="#464e5c", fg="white", highlightthickness=0, show="*")
-    senha_entry.pack(pady=5)
-
-    # Botão de login
-    def on_login_click():
-        global login_data
-        login_data = fazer_login(matricula_entry, senha_entry)
-        login_janela.destroy()
-
-    login_button = Button(tudo, text="Login", bg="#34495e", command=on_login_click)
-    login_button.pack(pady=10, ipadx=10)
-
-    # Rodapé
-    footer = Frame(login_janela, bg="#34495e", height=30)
-    footer.pack(fill=X, side=BOTTOM)
-
-    footer_label = Label(footer, text="Sistema de Gestão Acadêmica", fg="white", bg="#34495e")
-    footer_label.pack(pady=5)
-
-    login_janela.mainloop()
-
-    return login_data
-
-
 def main(nome):
     global checkboxes, disciplinas, entries_notas, cr_var
 
@@ -254,6 +197,3 @@ def main(nome):
 
     janela.mainloop()
 
-
-if __name__ == '__main__':
-    main("Yuri")
