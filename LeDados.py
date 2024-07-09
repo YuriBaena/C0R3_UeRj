@@ -1,0 +1,259 @@
+from tkinter import *
+import tkinter as tk
+
+
+def criar_dicionario_disciplinas(nome_do_arquivo="curso.txt"):
+    disciplinas = {}
+
+    with open(nome_do_arquivo, "r") as arquivo:
+        lista_dados = arquivo.readlines()
+
+    for linha in lista_dados:
+        linha = linha.strip()
+
+        # Ignorar linhas que começam com "-"
+        if linha.startswith('-'):
+            continue
+
+        # Extrair período e resto da linha
+        partes = linha.split(': ')
+        periodo, resto_linha = partes[0].split(' ', 1)
+        periodo = int(periodo)
+
+        # Extrair nome da disciplina
+        nome_disciplina = resto_linha.split('[')[0].strip()
+
+        # Extrair detalhes
+        detalhes = linha.split(': ')[1]
+        cred, ch, cod = detalhes.split(", ")
+
+        # Organizando creditos
+        cred = cred.replace("'", "").replace("[", "")
+
+        # Organizando carga horaria
+        ch = ch.replace("'", "")
+
+        # Organizando codigo da disciplina
+        cod = cod.replace("'", "").replace("]", "")
+
+        # Montar a lista de informações
+        info_disciplina = [periodo, cred, ch, cod]
+
+        # Adicionar ao dicionário
+        disciplinas[nome_disciplina] = info_disciplina
+
+    return disciplinas
+
+
+def verifica_periodos(disciplinas):
+    max_periodo = 0
+
+    for chave, valores in disciplinas.items():
+        if isinstance(valores[0], int):  # Verifica se valores[0] é do tipo int
+            if valores[0] > max_periodo:
+                max_periodo = valores[0]
+
+    return max_periodo
+
+
+def ajeita_checkboxes(disciplina, var, entry, row):
+    global checkboxes
+    if var.get() == 1:
+        checkboxes[disciplina] = [row, 1]
+    else:
+        checkboxes[disciplina] = [row, 0]
+    calcular_cr()
+
+
+def calcular_cr():
+    global checkboxes, entries_notas, disciplinas, cr_var
+
+    total_creditos = 0
+    soma_notas_creditos = 0
+
+    for disciplina, info in disciplinas.items():
+        if disciplina in checkboxes and checkboxes[disciplina][1] == 1:  # Se o checkbox está marcado
+            nota = entries_notas[disciplina].get()
+            if nota.isdigit() and int(nota) <= 10:
+                credito = int(info[1])
+                total_creditos += credito
+                soma_notas_creditos += int(nota) * credito
+
+    if total_creditos > 0:
+        cr = soma_notas_creditos / total_creditos
+        cr_var.set(f"CR: {cr:.2f}(sem eletivas)")
+    else:
+        cr_var.set("CR: N/A")
+
+
+def fazer_login(matricula_entry, senha_entry):
+    matricula = matricula_entry.get()
+    senha = senha_entry.get()
+    return [matricula, senha]
+
+
+def janela_login():
+    # Criando a janela de login
+    login_janela = tk.Tk()
+    login_janela.title("Login")
+    login_janela.config(background="#596475")
+
+    # Frame para conter tudo
+    tudo = Frame(login_janela, bg="#596475")
+    tudo.pack(padx=20, pady=40)
+
+    # Cabeçalho
+    header = Frame(tudo, bg="#34495e")
+    header.pack(fill=X)
+
+    header_label = Label(header, text="Login", font=("Helvetica", 18), fg="white", bg="#34495e")
+    header_label.pack(pady=10)
+
+    # Campos de entrada
+    matricula_label = Label(tudo, text="Matrícula:", fg="white", bg="#596475")
+    matricula_label.pack(pady=5)
+
+    matricula_entry = Entry(tudo, bg="#464e5c", fg="white", highlightthickness=0)
+    matricula_entry.pack(pady=5)
+
+    senha_label = Label(tudo, text="Senha:", fg="white", bg="#596475")
+    senha_label.pack(pady=5)
+
+    senha_entry = Entry(tudo, bg="#464e5c", fg="white", highlightthickness=0, show="*")
+    senha_entry.pack(pady=5)
+
+    # Botão de login
+    def on_login_click():
+        global login_data
+        login_data = fazer_login(matricula_entry, senha_entry)
+        login_janela.destroy()
+
+    login_button = Button(tudo, text="Login", bg="#34495e", command=on_login_click)
+    login_button.pack(pady=10, ipadx=10)
+
+    # Rodapé
+    footer = Frame(login_janela, bg="#34495e", height=30)
+    footer.pack(fill=X, side=BOTTOM)
+
+    footer_label = Label(footer, text="Sistema de Gestão Acadêmica", fg="white", bg="#34495e")
+    footer_label.pack(pady=5)
+
+    login_janela.mainloop()
+
+    return login_data
+
+
+def main(nome):
+    global checkboxes, disciplinas, entries_notas, cr_var
+
+    disciplinas = criar_dicionario_disciplinas()
+    periodos = verifica_periodos(disciplinas)
+    checkboxes = {}
+    entries_notas = {}
+
+    janela = tk.Tk()
+    janela.title("C0R3 (coeficiente de rendimento)")
+    janela.config(background="#596475")
+    janela.geometry("590x700")
+
+    # Criando um frame para conter tudo e expandir conforme o tamanho da janela
+    tudo = Frame(janela, bg="#596475")
+    tudo.pack(fill=BOTH, expand=True)
+
+    # Header fixo
+    header = Frame(tudo, bg="#34495e", height=50)
+    header.pack(fill=X)
+
+    header_label = Label(header, text=f"{nome}", font=("Helvetica", 18), fg="white", bg="#34495e")
+    header_label.pack(pady=10)
+
+    # Canvas com scrollbar
+    canvas = Canvas(tudo, bg="#7a88a1")
+    canvas.pack(side=LEFT, fill=BOTH, expand=True)
+
+    scrollbar = Scrollbar(tudo, orient=VERTICAL, command=canvas.yview)
+    scrollbar.pack(side=RIGHT, fill=Y)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # Frame que contém os períodos
+    frame_janela = Frame(canvas, bg="#7a88a1")
+    canvas_frame_id = canvas.create_window((0, 0), window=frame_janela, anchor="nw")
+
+    def on_frame_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    frame_janela.bind("<Configure>", on_frame_configure)
+
+    def on_canvas_configure(event):
+        canvas.itemconfig(canvas_frame_id,
+                          width=event.width)  # Ajusta a largura do frame_janela conforme a largura do canvas
+
+    canvas.bind("<Configure>", on_canvas_configure)
+
+    for i in range(1, periodos + 1):
+        framePeriodos = Frame(frame_janela, bg="#464e5c")
+        framePeriodos.grid(row=i, column=0, padx=10, pady=3, sticky="nsew")
+
+        # Equal column widths
+        framePeriodos.grid_columnconfigure(0, weight=1)
+        framePeriodos.grid_columnconfigure(1, weight=1)
+        framePeriodos.grid_columnconfigure(2, weight=1)
+        framePeriodos.grid_columnconfigure(3, weight=1)
+
+        periodo_label = Label(framePeriodos, text=f"{i}˚ Período", fg="white", bg="#464e5c")
+        periodo_label.grid(row=0, column=0, columnspan=4, pady=5, sticky="nsew")
+
+        # Labels para instruções
+        instrucao1 = Label(framePeriodos, text="FEZ?", fg="#0b1424", bg="#464e5c", font=("Helvetica", 12, "underline"))
+        instrucao1.grid(row=1, column=0, sticky="w")
+
+        instrucao2 = Label(framePeriodos, text="DISCIPLINA", fg="#0b1424", bg="#464e5c", font=("Helvetica", 12, "underline"))
+        instrucao2.grid(row=1, column=1, sticky="nsew")
+
+        instrucao3 = Label(framePeriodos, text="MÉDIA FINAL:", fg="#0b1424", bg="#464e5c", font=("Helvetica", 12, "underline"))
+        instrucao3.grid(row=1, column=3, sticky="nsew")
+
+        j = 2
+        for disciplina, info in disciplinas.items():
+            if info[0] == i:
+                # Entry for average
+                inpute = Entry(framePeriodos, bg="#464e5c", fg="white", highlightthickness=0)
+                inpute.insert(0, "Média: ")
+                inpute.grid(row=j, column=2, sticky="nsew")
+                inpute.grid_remove()
+
+                # Checkbutton for checkbox
+                x = IntVar()
+                checkbox = Checkbutton(framePeriodos, variable=x,
+                                       command=lambda d=disciplina, v=x, e=inpute, r=j: ajeita_checkboxes(d, v, e, r),
+                                       bg="#464e5c")
+                checkbox.grid(row=j, column=0, sticky="nsew")
+
+                # Label for discipline name
+                label = Label(framePeriodos, text=disciplina, fg="white", bg="#464e5c")
+                label.grid(row=j, column=1, sticky="nsew")
+
+                # Entry for note
+                entry_nota = Entry(framePeriodos, bg="#464e5c", fg="white", highlightthickness=0)
+                entry_nota.grid(row=j, column=3, sticky="nsew")
+
+                checkboxes[disciplina] = [j, 0]
+                entries_notas[disciplina] = entry_nota
+
+                j += 1
+
+    # Footer fixo
+    footer = Frame(janela, bg="#34495e", height=30)
+    footer.pack(fill=X, side=BOTTOM)
+
+    cr_var = StringVar()
+    cr_var.set("CR: 0 (sem eletivas)")
+    footer_label = Label(footer, textvariable=cr_var, fg="white", bg="#34495e")
+    footer_label.pack(pady=5)
+
+    janela.mainloop()
+
+
+if __name__ == '__main__':
+    main("Yuri")
