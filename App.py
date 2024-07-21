@@ -3,10 +3,10 @@ from LeDados import main
 import os
 
 try:
-    nome = janela_login()
-    main(nome)
+    main()
 except Exception as e:
-    print(f"Erro: {e}")
+    janela_login()
+    main()
 finally:
     arquivo_para_deletar = "curso.txt"
 

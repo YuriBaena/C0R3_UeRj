@@ -6,9 +6,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 import time
 
+
 def entra_na_do_seu_curso(matricula_pessoal, senha_pessoal):
-
-
     def entra():
         chrome.get("https://www.alunoonline.uerj.br/requisicaoaluno/")
         time.sleep(1)
@@ -26,7 +25,8 @@ def entra_na_do_seu_curso(matricula_pessoal, senha_pessoal):
         nome = chrome.find_element(By.XPATH, '//*[@id="table_cabecalho_rodape"]/tbody/tr[3]/td/font')
         nome = " ".join((nome.text.split("- ")[1]).split(" ")[:2])
 
-        entra = chrome.find_element(By.XPATH, '/html/body/table/tbody/tr[3]/td/form/table/tbody/tr[4]/td[3]/div[2]/div[15]/a')
+        entra = chrome.find_element(By.XPATH,
+                                    '/html/body/table/tbody/tr[3]/td/form/table/tbody/tr[4]/td[3]/div[2]/div[15]/a')
         entra.click()
         time.sleep(3)
 
@@ -40,21 +40,26 @@ def entra_na_do_seu_curso(matricula_pessoal, senha_pessoal):
         return (nome, curso)
 
     def entra_disciplinas():
-        disciplinas = chrome.find_element(By.XPATH, '/html/body/table/tbody/tr[3]/td/form/table/tbody/tr[4]/td[3]/div[2]/div[3]/a')
+        disciplinas = chrome.find_element(By.XPATH,
+                                          '/html/body/table/tbody/tr[3]/td/form/table/tbody/tr[4]/td[3]/div[2]/div[3]/a')
         disciplinas.click()
         time.sleep(2)
 
     def disciplina(i):
         continua = True
-        periodo = chrome.find_element(By.XPATH, f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[2]')
+        periodo = chrome.find_element(By.XPATH,
+                                      f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[2]')
 
         if not periodo.text.isnumeric():
             continua = False
             return continua
 
-        disciplina = chrome.find_element(By.XPATH, f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[1]')
-        cred = chrome.find_element(By.XPATH, f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[6]')
-        ch = chrome.find_element(By.XPATH, f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[7]')
+        disciplina = chrome.find_element(By.XPATH,
+                                         f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[1]')
+        cred = chrome.find_element(By.XPATH,
+                                   f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[6]')
+        ch = chrome.find_element(By.XPATH,
+                                 f'/html/body/table/tbody/tr[3]/td/form/div[1]/div[2]/table/tbody/tr[{i}]/td[7]')
 
         codigo = disciplina.text.split(" ")[0]
         disciplina_nome = " ".join(disciplina.text.split(" ")[1:])
@@ -62,13 +67,50 @@ def entra_na_do_seu_curso(matricula_pessoal, senha_pessoal):
         ch_horas = ch.text + "hrs"
         periodo_valor = periodo.text
 
-        discip_cred[periodo_valor + " " + disciplina_nome] = [cred_valor, ch_horas, codigo]
+        nota = 0
+
+        discip_cred[periodo_valor + " " + disciplina_nome] = [cred_valor, ch_horas, codigo, nota]
 
         return continua
 
-    def sai_salva():
+    def entra_discp_ja_feitas():
+        home = chrome.find_element(By.XPATH, '/html/body/table/tbody/tr[2]/td/table/tbody/tr/td/a[1]')
+        home.click()
+        time.sleep(2)
+
+        realizados = chrome.find_element(By.XPATH,
+                                         '/html/body/table/tbody/tr[3]/td/form/table/tbody/tr[4]/td[3]/div[2]/div[13]/a')
+        realizados.click()
+
+        time.sleep(2)
+
+    def verifica_nota(i):
+
+        ja_realizou = chrome.find_element(By.XPATH,
+                                          f'/html/body/table/tbody/tr[3]/td/form/div/div[1]/div[2]/table/tbody/tr[{i}]/td[2]/a').text
+
+        nota = chrome.find_element(By.XPATH,
+                                   f'/html/body/table/tbody/tr[3]/td/form/div/div[1]/div[2]/table/tbody/tr[{i}]/td[7]').text.strip()
+
+        decimal = int(nota.split(",")[1])
+        if decimal > 0:
+            nota = float(nota.split(",")[0] + "." + nota.split(",")[1])
+        else:
+            nota = int(nota.split(",")[0])
+
+
+        for chave, valor in discip_cred.items():
+            materia = " ".join(chave.split(" ")[1:]).strip()
+            realizada = " ".join(ja_realizou.split(" ")[1:]).strip()
+            if materia == realizada:
+                valor.pop()
+                valor.append(nota)
+                discip_cred[chave] = valor
+                break
+
+    def sai_salva(nome, curso):
         chrome.quit()  # Fechar o navegador ao finalizar
-        salvar_dict_em_arquivo(discip_cred)
+        salvar_dict_em_arquivo(discip_cred, nome, curso)
 
     discip_cred = {}
 
@@ -87,17 +129,28 @@ def entra_na_do_seu_curso(matricula_pessoal, senha_pessoal):
             break
         i += 1
 
-    sai_salva()
+    i = 2
+    entra_discp_ja_feitas()
+    while True:
+        try:
+            verifica_nota(i)
+        except Exception as e:
+            break
 
-    return f"{nome} - {curso}"
+        i += 1
 
-def salvar_dict_em_arquivo(dicionario):
+    sai_salva(nome, curso)
+
+
+def salvar_dict_em_arquivo(dicionario, nome, curso):
     with open("curso.txt", 'w') as arquivo:
+        arquivo.write(f"{nome} - {curso}\n")
+
         for chave, valor in dicionario.items():
             arquivo.write(f'{chave}: {valor}\n')
 
+
 def janela_login():
-    global nome
     # Criando a janela de login
     login_janela = tk.Tk()
     login_janela.title("Login")
@@ -129,10 +182,9 @@ def janela_login():
 
     # Botão de login
     def on_login_click():
-        global nome
         mat = matricula_entry.get()
         sen = senha_entry.get()
-        nome = entra_na_do_seu_curso(mat, sen)
+        entra_na_do_seu_curso(mat, sen)
         login_janela.destroy()
 
     login_button = Button(tudo, text="Login", bg="#34495e", highlightbackground="#596475", command=on_login_click)
@@ -147,4 +199,6 @@ def janela_login():
 
     login_janela.mainloop()
 
-    return nome
+
+if __name__ == '__main__':
+    janela_login()

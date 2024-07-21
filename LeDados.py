@@ -8,7 +8,7 @@ def criar_dicionario_disciplinas(nome_do_arquivo="curso.txt"):
     with open(nome_do_arquivo, "r") as arquivo:
         lista_dados = arquivo.readlines()
 
-    for linha in lista_dados:
+    for linha in lista_dados[1:]:
         linha = linha.strip()
 
         # Ignorar linhas que começam com "-"
@@ -25,10 +25,10 @@ def criar_dicionario_disciplinas(nome_do_arquivo="curso.txt"):
 
         # Extrair detalhes
         detalhes = linha.split(': ')[1]
-        cred, ch, cod = detalhes.split(", ")
+        cred, ch, cod, nota = detalhes.split(", ")
 
         # Organizando creditos
-        cred = cred.replace("'", "").replace("[", "")
+        cred = int(cred.replace("'", "").replace("[", ""))
 
         # Organizando carga horaria
         ch = ch.replace("'", "")
@@ -36,8 +36,11 @@ def criar_dicionario_disciplinas(nome_do_arquivo="curso.txt"):
         # Organizando codigo da disciplina
         cod = cod.replace("'", "").replace("]", "")
 
+        #Organizando nota
+        nota = float(nota.replace("]", ""))
+
         # Montar a lista de informações
-        info_disciplina = [periodo, cred, ch, cod]
+        info_disciplina = [periodo, cred, ch, cod, nota]
 
         # Adicionar ao dicionário
         disciplinas[nome_disciplina] = info_disciplina
@@ -56,10 +59,15 @@ def verifica_periodos(disciplinas):
     return max_periodo
 
 
-def ajeita_checkboxes(disciplina, var, entry, row):
-    global checkboxes
+def ajeita_checkboxes(disciplina, var, row, disciplinas):
+    global checkboxes, entries_notas
     if var.get() == 1:
         checkboxes[disciplina] = [row, 1]
+        disciplinas[disciplina].pop()
+        nota = float(entries_notas[disciplina].get())
+        nova_lista = disciplinas[disciplina]
+        nova_lista.append(nota)
+        disciplinas[disciplina] = nova_lista
     else:
         checkboxes[disciplina] = [row, 0]
     calcular_cr()
@@ -73,11 +81,10 @@ def calcular_cr():
 
     for disciplina, info in disciplinas.items():
         if disciplina in checkboxes and checkboxes[disciplina][1] == 1:  # Se o checkbox está marcado
-            nota = entries_notas[disciplina].get()
-            if nota.isdigit() and int(nota) <= 10:
-                credito = int(info[1])
+            if info[-1] <= 10:
+                credito = info[1]
                 total_creditos += credito
-                soma_notas_creditos += int(nota) * credito
+                soma_notas_creditos += int(info[-1]) * credito
 
     if total_creditos > 0:
         cr = soma_notas_creditos / total_creditos
@@ -86,8 +93,12 @@ def calcular_cr():
         cr_var.set("CR: N/A")
 
 
-def main(nome):
+def main():
     global checkboxes, disciplinas, entries_notas, cr_var
+
+    with open("curso.txt", "r") as arqv:
+        nome = arqv.readlines(1)[0]
+        arqv.close()
 
     disciplinas = criar_dicionario_disciplinas()
     periodos = verifica_periodos(disciplinas)
@@ -159,17 +170,11 @@ def main(nome):
 
         j = 2
         for disciplina, info in disciplinas.items():
-            if info[0] == i:
-                # Entry for average
-                inpute = Entry(framePeriodos, bg="#464e5c", fg="white", highlightthickness=0)
-                inpute.insert(0, "Média: ")
-                inpute.grid(row=j, column=2, sticky="nsew")
-                inpute.grid_remove()
-
+            if info[0] == i and info[-1] == 0:
                 # Checkbutton for checkbox
                 x = IntVar()
                 checkbox = Checkbutton(framePeriodos, variable=x,
-                                       command=lambda d=disciplina, v=x, e=inpute, r=j: ajeita_checkboxes(d, v, e, r),
+                                       command=lambda d=disciplina, dd=disciplinas , v=x, r=j: ajeita_checkboxes(d, v, r, dd),
                                        bg="#464e5c")
                 checkbox.grid(row=j, column=0, sticky="nsew")
 
@@ -179,6 +184,29 @@ def main(nome):
 
                 # Entry for note
                 entry_nota = Entry(framePeriodos, bg="#464e5c", fg="white", highlightthickness=0)
+                entry_nota.grid(row=j, column=3, sticky="nsew")
+
+                checkboxes[disciplina] = [j, 0]
+                entries_notas[disciplina] = entry_nota
+
+                j += 1
+
+            elif info[0] == i and info[-1] != 0:
+                # Checkbutton for checkbox
+                x = IntVar()
+                checkbox = Checkbutton(framePeriodos, variable=x,
+                                       command=lambda d=disciplina, dd=disciplinas , v=x, r=j: ajeita_checkboxes(d, v, r, dd),
+                                       bg="#464e5c")
+                checkbox.grid(row=j, column=0, sticky="nsew")
+
+                # Label for discipline name
+                label = Label(framePeriodos, text=disciplina, fg="white", bg="#464e5c")
+                label.grid(row=j, column=1, sticky="nsew")
+
+                # Entry for note
+                entry_nota = Entry(framePeriodos, bg="#464e5c", fg="white", highlightthickness=0)
+                entry_nota.insert(0, info[-1])
+                entry_nota.configure(state=DISABLED)
                 entry_nota.grid(row=j, column=3, sticky="nsew")
 
                 checkboxes[disciplina] = [j, 0]
@@ -197,3 +225,5 @@ def main(nome):
 
     janela.mainloop()
 
+if __name__ == '__main__':
+    main()
